@@ -1,10 +1,10 @@
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AgentDecision(BaseModel):
     action: Literal["respond", "tool"]
     reasoning: str
     tool_name: str | None = None
-    arguments: dict[str, Any] = {}
+    arguments: dict[str, Any] = Field(default_factory=dict)
