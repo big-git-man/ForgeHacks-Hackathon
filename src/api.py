@@ -1,34 +1,82 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException
+
+from src.api_schemas import (
+    AnalysisResponse,
+    ErrorResponse,
+    HealthResponse,
+    ProblemRequest,
+)
+from src.application import ApplicationService
+from src.llm_client import LLMClient
+from src.orchestrator import AIOrchestrator
 
 
 app = FastAPI(
     title="ForgeHacks AI API",
-    version="0.1.0",
+    version="0.2.0",
 )
 
 
-class ProblemRequest(BaseModel):
-    problem: str
+def build_application_service() -> ApplicationService:
+    client = LLMClient()
 
+    orchestrator = AIOrchestrator(
+        llm_client=client,
+    )
 
-class HealthResponse(BaseModel):
-    status: str
+    return ApplicationService(
+        orchestrator=orchestrator,
+    )
 
 
 @app.get(
     "/health",
     response_model=HealthResponse,
 )
-def health():
+def health() -> HealthResponse:
     return HealthResponse(
-        status="healthy"
+        status="healthy",
     )
 
 
-@app.post("/analyze")
-def analyze(request: ProblemRequest):
-    return {
-        "problem": request.problem,
-        "status": "received",
-    }
+@app.post(
+    "/analyze",
+    response_model=AnalysisResponse,
+    responses={
+        400: {
+            "model": ErrorResponse,
+        },
+        500: {
+            "model": ErrorResponse,
+        },
+    },
+)
+def analyze(
+    request: ProblemRequest,
+) -> AnalysisResponse:
+    try:
+        service = build_application_service()
+
+        response = service.analyze(
+            request.problem
+        )
+
+        return AnalysisResponse.model_validate(
+            {
+                "problem": response.problem,
+                "status": response.status,
+                "result": response.result.model_dump(),
+            }
+        )
+
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=str(exc),
+        ) from exc
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail="Analysis service failed.",
+        ) from exc
