@@ -1,5 +1,10 @@
 from fastapi import FastAPI, HTTPException
 
+from src.api_errors import (
+    generic_error_handler,
+    value_error_handler,
+)
+from src.api_middleware import request_logging_middleware
 from src.api_schemas import (
     AnalysisResponse,
     ErrorResponse,
@@ -13,7 +18,21 @@ from src.orchestrator import AIOrchestrator
 
 app = FastAPI(
     title="ForgeHacks AI API",
-    version="0.2.2",
+    version="0.3.0",
+    description="Production-ready API foundation for ForgeHacks.",
+)
+
+
+app.middleware("http")(request_logging_middleware)
+
+app.add_exception_handler(
+    ValueError,
+    value_error_handler,
+)
+
+app.add_exception_handler(
+    Exception,
+    generic_error_handler,
 )
 
 
@@ -48,7 +67,7 @@ def get_application_service() -> ApplicationService:
 )
 def health() -> HealthResponse:
     return HealthResponse(
-        status="healthy"
+        status="healthy",
     )
 
 
@@ -71,7 +90,7 @@ def analyze(
         service = get_application_service()
 
         response = service.analyze(
-            request.problem
+            request.problem,
         )
 
         return AnalysisResponse(
