@@ -39,6 +39,12 @@ def test_analyze_endpoint():
         )
         assert data["status"] == "completed"
         assert data["result"]["title"] == "Test Project"
+        assert data["result"]["solution"] == (
+            "A test solution."
+        )
+        assert data["result"]["impact"] == (
+            "Useful impact."
+        )
 
     finally:
         if hasattr(

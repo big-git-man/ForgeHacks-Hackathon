@@ -47,10 +47,19 @@ def test_analyze_success_with_mocked_service():
 
         data = response.json()
 
+        assert data["problem"] == (
+            "How can we reduce food waste?"
+        )
         assert data["status"] == "completed"
         assert data["result"]["title"] == "Test Project"
         assert data["result"]["problem"] == (
             "How can we reduce food waste?"
+        )
+        assert data["result"]["solution"] == (
+            "A test solution."
+        )
+        assert data["result"]["impact"] == (
+            "Useful impact."
         )
 
     finally:
