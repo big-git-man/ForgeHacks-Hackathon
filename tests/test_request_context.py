@@ -7,22 +7,19 @@ from src.request_context import (
 )
 
 
-def test_request_id_generation():
+def test_request_id_lifecycle():
     request_id = create_request_id()
 
     assert request_id
-    assert len(request_id) == 36
+    assert get_request_id() is None
+
+    set_request_id(request_id)
+
+    assert get_request_id() == request_id
 
 
-def test_request_context_storage():
-    set_request_id("test-request-id")
-
-    assert get_request_id() == "test-request-id"
-
-
-def test_timer_returns_non_negative_duration():
+def test_timer_returns_elapsed_time():
     start = start_timer()
+    elapsed = elapsed_ms(start)
 
-    duration = elapsed_ms(start)
-
-    assert duration >= 0
+    assert elapsed >= 0

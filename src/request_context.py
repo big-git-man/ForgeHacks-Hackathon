@@ -1,16 +1,12 @@
-import time
-import uuid
 from contextvars import ContextVar
+from time import perf_counter
+from uuid import uuid4
 
-
-_request_id: ContextVar[str | None] = ContextVar(
-    "request_id",
-    default=None,
-)
+_request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 
 
 def create_request_id() -> str:
-    return str(uuid.uuid4())
+    return str(uuid4())
 
 
 def set_request_id(request_id: str) -> None:
@@ -22,8 +18,8 @@ def get_request_id() -> str | None:
 
 
 def start_timer() -> float:
-    return time.perf_counter()
+    return perf_counter()
 
 
 def elapsed_ms(start_time: float) -> float:
-    return (time.perf_counter() - start_time) * 1000
+    return (perf_counter() - start_time) * 1000
