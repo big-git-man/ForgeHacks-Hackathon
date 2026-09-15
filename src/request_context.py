@@ -1,8 +1,12 @@
-from contextvars import ContextVar
+﻿from contextvars import ContextVar
 from time import perf_counter
 from uuid import uuid4
 
-_request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
+
+_request_id: ContextVar[str | None] = ContextVar(
+    "request_id",
+    default=None,
+)
 
 
 def create_request_id() -> str:

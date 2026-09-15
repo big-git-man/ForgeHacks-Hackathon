@@ -1,9 +1,10 @@
-import time
+﻿import time
 
 from openai import OpenAI
 
 from src.config import settings
 from src.logger import get_logger
+from src.metrics import metrics
 
 
 class LLMClient:
@@ -34,69 +35,131 @@ class LLMClient:
             timeout=self.timeout,
         )
 
-    def _request(self, prompt: str, json_mode: bool = False) -> str:
+    def _request(
+        self,
+        prompt: str,
+        json_mode: bool = False,
+    ) -> str:
         last_error = None
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                self.logger.info("LLM request started.")
+        metrics.llm.total_calls += 1
+        call_start = time.perf_counter()
 
-                kwargs = {
-                    "model": self.model,
-                    "messages": [
-                        {"role": "user", "content": prompt}
-                    ],
-                }
+        try:
+            for attempt in range(self.max_retries + 1):
+                try:
+                    self.logger.info(
+                        "LLM request started."
+                    )
 
-                if json_mode:
-                    kwargs["messages"] = [
-                        {
-                            "role": "system",
-                            "content": (
-                                "Return only valid JSON. "
-                                "Do not include markdown or additional text."
-                            ),
-                        },
-                        {"role": "user", "content": prompt},
-                    ]
-                    kwargs["response_format"] = {"type": "json_object"}
+                    kwargs = {
+                        "model": self.model,
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": prompt,
+                            }
+                        ],
+                    }
 
-                response = self.client.chat.completions.create(**kwargs)
+                    if json_mode:
+                        kwargs["messages"] = [
+                            {
+                                "role": "system",
+                                "content": (
+                                    "Return only valid JSON. "
+                                    "Do not include markdown or "
+                                    "additional text."
+                                ),
+                            },
+                            {
+                                "role": "user",
+                                "content": prompt,
+                            },
+                        ]
 
-                self.logger.info("LLM request succeeded.")
+                        kwargs["response_format"] = {
+                            "type": "json_object"
+                        }
 
-                return response.choices[0].message.content or ""
+                    response = (
+                        self.client
+                        .chat
+                        .completions
+                        .create(**kwargs)
+                    )
 
-            except Exception as exc:
-                last_error = exc
+                    self.logger.info(
+                        "LLM request succeeded."
+                    )
 
-                self.logger.warning(
-                    f"LLM request failed on attempt {attempt + 1}. "
-                    f"Retrying: {attempt < self.max_retries}"
-                )
+                    metrics.llm.successful_calls += 1
 
-                if attempt == self.max_retries:
-                    break
+                    return (
+                        response
+                        .choices[0]
+                        .message
+                        .content
+                        or ""
+                    )
 
-                delay = self.retry_delay * (2 ** attempt)
-                time.sleep(delay)
+                except Exception as exc:
+                    last_error = exc
 
-        raise RuntimeError(
-            f"LLM request failed after {self.max_retries + 1} attempts."
-        ) from last_error
+                    self.logger.warning(
+                        "LLM request failed on "
+                        f"attempt {attempt + 1}. "
+                        f"Retrying: "
+                        f"{attempt < self.max_retries}"
+                    )
+
+                    if attempt == self.max_retries:
+                        break
+
+                    delay = (
+                        self.retry_delay
+                        * (2 ** attempt)
+                    )
+
+                    time.sleep(delay)
+
+            metrics.llm.failed_calls += 1
+
+            raise RuntimeError(
+                "LLM request failed after "
+                f"{self.max_retries + 1} attempts."
+            ) from last_error
+
+        finally:
+            metrics.llm.total_latency_ms += (
+                time.perf_counter() - call_start
+            ) * 1000
 
     def generate(self, prompt: str) -> str:
-        return self._request(prompt, json_mode=False)
+        return self._request(
+            prompt,
+            json_mode=False,
+        )
 
     def generate_json(self, prompt: str) -> str:
-        return self._request(prompt, json_mode=True)
+        return self._request(
+            prompt,
+            json_mode=True,
+        )
 
-    def generate_structured(self, prompt: str, schema):
+    def generate_structured(
+        self,
+        prompt: str,
+        schema,
+    ):
         raw_output = self.generate_json(prompt)
 
         try:
-            return schema.model_validate_json(raw_output)
+            return schema.model_validate_json(
+                raw_output
+            )
         except Exception as exc:
             raise ValueError(
-                f"LLM output does not match schema: {schema.__name__}"
+                "LLM output does not match schema: "
+                f"{schema.__name__}"
             ) from exc

@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+﻿from dataclasses import dataclass, field
 
 
 @dataclass
@@ -12,6 +12,7 @@ class RequestMetrics:
     def average_latency_ms(self) -> float:
         if self.total_requests == 0:
             return 0.0
+
         return self.total_latency_ms / self.total_requests
 
 
@@ -26,6 +27,7 @@ class LLMCallMetrics:
     def average_latency_ms(self) -> float:
         if self.total_calls == 0:
             return 0.0
+
         return self.total_latency_ms / self.total_calls
 
 
@@ -40,14 +42,23 @@ class ToolCallMetrics:
     def average_latency_ms(self) -> float:
         if self.total_calls == 0:
             return 0.0
+
         return self.total_latency_ms / self.total_calls
 
 
 @dataclass
 class Metrics:
-    requests: RequestMetrics = field(default_factory=RequestMetrics)
-    llm: LLMCallMetrics = field(default_factory=LLMCallMetrics)
-    tools: ToolCallMetrics = field(default_factory=ToolCallMetrics)
+    requests: RequestMetrics = field(
+        default_factory=RequestMetrics
+    )
+
+    llm: LLMCallMetrics = field(
+        default_factory=LLMCallMetrics
+    )
+
+    tools: ToolCallMetrics = field(
+        default_factory=ToolCallMetrics
+    )
 
 
 metrics = Metrics()

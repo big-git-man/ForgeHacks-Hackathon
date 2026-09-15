@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -13,6 +13,8 @@ def get_logger(name: str) -> logging.Logger:
 
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
+
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
 
     return logger

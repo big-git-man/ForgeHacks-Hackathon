@@ -1,10 +1,6 @@
-from fastapi import FastAPI, HTTPException
+﻿from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import Response
 
-from src.api_errors import (
-    generic_error_handler,
-    value_error_handler,
-)
-from src.api_middleware import request_logging_middleware
 from src.api_schemas import (
     AnalysisResponse,
     ErrorResponse,
@@ -13,26 +9,23 @@ from src.api_schemas import (
 )
 from src.application import ApplicationService
 from src.llm_client import LLMClient
+from src.logger import get_logger
+from src.metrics import metrics
 from src.orchestrator import AIOrchestrator
+from src.request_context import (
+    create_request_id,
+    elapsed_ms,
+    set_request_id,
+    start_timer,
+)
+
+
+logger = get_logger("api")
 
 
 app = FastAPI(
     title="ForgeHacks AI API",
     version="0.3.0",
-    description="Production-ready API foundation for ForgeHacks.",
-)
-
-
-app.middleware("http")(request_logging_middleware)
-
-app.add_exception_handler(
-    ValueError,
-    value_error_handler,
-)
-
-app.add_exception_handler(
-    Exception,
-    generic_error_handler,
 )
 
 
@@ -61,13 +54,70 @@ def get_application_service() -> ApplicationService:
     return service
 
 
+@app.middleware("http")
+async def observability_middleware(
+    request: Request,
+    call_next,
+) -> Response:
+    request_id = create_request_id()
+    set_request_id(request_id)
+
+    start_time = start_timer()
+
+    metrics.requests.total_requests += 1
+
+    logger.info(
+        "REQUEST START | "
+        f"id={request_id} | "
+        f"method={request.method} | "
+        f"path={request.url.path}"
+    )
+
+    try:
+        response = await call_next(request)
+
+        latency = elapsed_ms(start_time)
+
+        metrics.requests.total_latency_ms += latency
+
+        if response.status_code < 400:
+            metrics.requests.successful_requests += 1
+        else:
+            metrics.requests.failed_requests += 1
+
+        response.headers["X-Request-ID"] = request_id
+
+        logger.info(
+            "REQUEST END | "
+            f"id={request_id} | "
+            f"status={response.status_code} | "
+            f"latency_ms={latency:.2f}"
+        )
+
+        return response
+
+    except Exception:
+        latency = elapsed_ms(start_time)
+
+        metrics.requests.total_latency_ms += latency
+        metrics.requests.failed_requests += 1
+
+        logger.exception(
+            "REQUEST ERROR | "
+            f"id={request_id} | "
+            f"latency_ms={latency:.2f}"
+        )
+
+        raise
+
+
 @app.get(
     "/health",
     response_model=HealthResponse,
 )
 def health() -> HealthResponse:
     return HealthResponse(
-        status="healthy",
+        status="healthy"
     )
 
 
@@ -90,7 +140,7 @@ def analyze(
         service = get_application_service()
 
         response = service.analyze(
-            request.problem,
+            request.problem
         )
 
         return AnalysisResponse(
@@ -106,6 +156,10 @@ def analyze(
         ) from exc
 
     except Exception as exc:
+        logger.exception(
+            "Analysis service failed."
+        )
+
         raise HTTPException(
             status_code=500,
             detail="Analysis service failed.",
