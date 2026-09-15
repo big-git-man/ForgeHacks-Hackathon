@@ -1,12 +1,13 @@
 from dataclasses import dataclass
-from typing import Any
+
+from src.schemas import ProjectIdea
 
 
 @dataclass
 class AnalysisResponse:
     problem: str
     status: str
-    result: Any
+    result: ProjectIdea
 
 
 class ApplicationService:
@@ -23,6 +24,9 @@ class ApplicationService:
             raise ValueError("Problem cannot be empty.")
 
         result = self.orchestrator.analyze_problem(problem)
+
+        if not isinstance(result, ProjectIdea):
+            result = ProjectIdea.model_validate(result)
 
         return AnalysisResponse(
             problem=problem,

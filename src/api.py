@@ -13,7 +13,7 @@ from src.orchestrator import AIOrchestrator
 
 app = FastAPI(
     title="ForgeHacks AI API",
-    version="0.2.0",
+    version="0.2.1",
 )
 
 
@@ -61,12 +61,10 @@ def analyze(
             request.problem
         )
 
-        return AnalysisResponse.model_validate(
-            {
-                "problem": response.problem,
-                "status": response.status,
-                "result": response.result.model_dump(),
-            }
+        return AnalysisResponse(
+            problem=response.problem,
+            status=response.status,
+            result=response.result,
         )
 
     except ValueError as exc:

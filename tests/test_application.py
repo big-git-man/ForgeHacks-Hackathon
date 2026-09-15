@@ -1,11 +1,10 @@
-from types import SimpleNamespace
-
 from src.application import ApplicationService
+from src.schemas import ProjectIdea
 
 
 class FakeOrchestrator:
     def analyze_problem(self, problem):
-        return SimpleNamespace(
+        return ProjectIdea(
             title="Test Project",
             problem=problem,
             solution="A test solution.",

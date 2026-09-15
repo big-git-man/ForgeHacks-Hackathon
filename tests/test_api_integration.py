@@ -1,16 +1,16 @@
-from types import SimpleNamespace
-
 from fastapi.testclient import TestClient
 
 from src.api import app
+from src.application import AnalysisResponse
+from src.schemas import ProjectIdea
 
 
 class FakeApplicationService:
     def analyze(self, problem):
-        return SimpleNamespace(
+        return AnalysisResponse(
             problem=problem,
             status="completed",
-            result=SimpleNamespace(
+            result=ProjectIdea(
                 title="Test Project",
                 problem=problem,
                 solution="A test solution.",
