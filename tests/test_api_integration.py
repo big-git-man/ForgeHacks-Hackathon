@@ -1,22 +1,7 @@
 from fastapi.testclient import TestClient
 
 from src.api import app
-from src.application import AnalysisResponse
-from src.schemas import ProjectIdea
-
-
-class FakeApplicationService:
-    def analyze(self, problem):
-        return AnalysisResponse(
-            problem=problem,
-            status="completed",
-            result=ProjectIdea(
-                title="Test Project",
-                problem=problem,
-                solution="A test solution.",
-                impact="Useful impact.",
-            ),
-        )
+from tests.fake_application import FakeApplicationService
 
 
 def test_health_endpoint():
@@ -41,30 +26,36 @@ def test_analyze_validation():
     assert response.status_code == 422
 
 
-def test_analyze_success_with_mocked_service(monkeypatch):
-    from src import api
-
-    monkeypatch.setattr(
-        api,
-        "build_application_service",
-        lambda: FakeApplicationService(),
+def test_analyze_success_with_mocked_service():
+    app.state.application_service = (
+        FakeApplicationService()
     )
 
-    client = TestClient(app)
+    try:
+        client = TestClient(app)
 
-    response = client.post(
-        "/analyze",
-        json={
-            "problem": "How can we reduce food waste?"
-        },
-    )
+        response = client.post(
+            "/analyze",
+            json={
+                "problem": "How can we reduce food waste?"
+            },
+        )
 
-    assert response.status_code == 200
+        assert response.status_code == 200, (
+            f"Unexpected response: {response.text}"
+        )
 
-    data = response.json()
+        data = response.json()
 
-    assert data["status"] == "completed"
-    assert data["result"]["title"] == "Test Project"
-    assert data["result"]["problem"] == (
-        "How can we reduce food waste?"
-    )
+        assert data["status"] == "completed"
+        assert data["result"]["title"] == "Test Project"
+        assert data["result"]["problem"] == (
+            "How can we reduce food waste?"
+        )
+
+    finally:
+        if hasattr(
+            app.state,
+            "application_service",
+        ):
+            del app.state.application_service
