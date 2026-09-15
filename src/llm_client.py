@@ -3,9 +3,12 @@ import time
 from openai import OpenAI
 
 from src.config import settings
+from src.logger import get_logger
 
 
 class LLMClient:
+    logger = get_logger("llm_client")
+
     def __init__(
         self,
         api_key: str | None = None,
@@ -36,6 +39,8 @@ class LLMClient:
 
         for attempt in range(self.max_retries + 1):
             try:
+                self.logger.info("LLM request started.")
+
                 kwargs = {
                     "model": self.model,
                     "messages": [
@@ -58,10 +63,17 @@ class LLMClient:
 
                 response = self.client.chat.completions.create(**kwargs)
 
+                self.logger.info("LLM request succeeded.")
+
                 return response.choices[0].message.content or ""
 
             except Exception as exc:
                 last_error = exc
+
+                self.logger.warning(
+                    f"LLM request failed on attempt {attempt + 1}. "
+                    f"Retrying: {attempt < self.max_retries}"
+                )
 
                 if attempt == self.max_retries:
                     break
