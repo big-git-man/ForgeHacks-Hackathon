@@ -1,10 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.schemas import ProjectIdea
 
 
 class ProblemRequest(BaseModel):
-    problem: str
+    problem: str = Field(
+        min_length=1,
+        max_length=5000,
+    )
 
 
 class HealthResponse(BaseModel):

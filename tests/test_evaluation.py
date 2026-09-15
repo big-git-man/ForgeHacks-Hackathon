@@ -1,4 +1,4 @@
-﻿from src.evaluator import Evaluator
+from src.evaluator import Evaluator
 
 
 def test_exact_match_passes():
