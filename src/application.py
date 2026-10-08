@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 from src.schemas import ProjectIdea
 
@@ -23,6 +23,7 @@ class ApplicationService:
         if not problem:
             raise ValueError("Problem cannot be empty.")
 
+        # Preserve the original foundation service contract.
         result = self.orchestrator.analyze_problem(problem)
 
         if not isinstance(result, ProjectIdea):

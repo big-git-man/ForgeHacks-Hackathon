@@ -24,8 +24,8 @@ logger = get_logger("api")
 
 
 app = FastAPI(
-    title="ForgeHacks AI API",
-    version="0.3.0",
+    title="TrustLens AI API",
+    version="0.4.0",
 )
 
 

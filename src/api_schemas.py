@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+﻿from pydantic import BaseModel, Field
 
 from src.schemas import ProjectIdea
 
@@ -16,7 +16,6 @@ class HealthResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
-    request_id: str | None = None
 
 
 class AnalysisResponse(BaseModel):
